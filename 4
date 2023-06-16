@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>待办事项管理</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    h1 { text-align: center; }
+    form { margin-bottom: 20px; }
+    .completed { text-decoration: line-through; }
+  </style>
+</head>
+<body>
+  <h1>待办事项列表</h1>
+
+  <form id="todoForm">
+    <input type="text" id="todoInput" placeholder="输入待办事项">
+    <button type="submit">添加</button>
+  </form>
+
+  <ul id="todoList"></ul>
+
+  <script>
+    // 获取待办事项列表
+    function fetchTodos() {
+      fetch('/todos')
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(todos) {
+          var todoList = document.getElementById('todoList');
+          todoList.innerHTML = '';
+
+          todos.forEach(function(todo) {
+            var listItem = document.createElement('li');
+            listItem.textContent = todo.title;
+            if (todo.completed) {
+              listItem.classList.add('completed');
+            }
+            todoList.appendChild(listItem);
+          });
+        });
+    }
+
+    // 提交新的待办事项
+    document.getElementById('todoForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      var todoInput = document.getElementById('todoInput');
+      var title = todoInput.value.trim();
+
+      if (title !== '') {
+        fetch('/todos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'title=' + encodeURIComponent(title)
+        })
+          .then(function(response) {
+            if (response.ok) {
+              todoInput.value = '';
+              fetchTodos();
+            }
+          });
+      }
+    });
+
+    // 更新待办事项完成状态
+    document.getElementById('todoList').addEventListener('click', function(event) {
+      if (event.target.tagName === 'LI') {
+        event.target.classList.toggle('completed');
+        var todoId = event.target.dataset.id;
+        var completed = event.target.classList.contains('completed');
+
+        fetch('/todos/' + todoId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'completed=' + completed
+        });
+      }
+    });
+
+    // 加载初始待办事项列表
+    fetchTodos();
+  </script>
+</body>
+</html>
