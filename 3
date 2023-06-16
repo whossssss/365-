@@ -1,0 +1,88 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+
+const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static('public'));
+
+// 连接到MongoDB数据库
+mongoose.connect('mongodb://localhost/todo', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+});
+const db = mongoose.connection;
+
+// 检查数据库连接
+db.on('error', console.error.bind(console, '数据库连接错误：'));
+db.once('open', function() {
+  console.log('成功连接到数据库');
+});
+
+// 定义待办事项模型
+const todoSchema = new mongoose.Schema({
+  title: String,
+  completed: { type: Boolean, default: false }
+});
+const Todo = mongoose.model('Todo', todoSchema);
+
+// 获取所有待办事项
+app.get('/todos', function(req, res) {
+  Todo.find({}, function(err, todos) {
+    if (err) {
+      console.error(err);
+      res.status(500).send('服务器错误');
+    } else {
+      res.json(todos);
+    }
+  });
+});
+
+// 创建新的待办事项
+app.post('/todos', function(req, res) {
+  const todo = new Todo({
+    title: req.body.title
+  });
+
+  todo.save(function(err) {
+    if (err) {
+      console.error(err);
+      res.status(500).send('服务器错误');
+    } else {
+      res.send('待办事项已创建');
+    }
+  });
+});
+
+// 更新待办事项完成状态
+app.put('/todos/:id', function(req, res) {
+  Todo.findByIdAndUpdate(
+    req.params.id,
+    { completed: req.body.completed },
+    function(err) {
+      if (err) {
+        console.error(err);
+        res.status(500).send('服务器错误');
+      } else {
+        res.send('待办事项已更新');
+      }
+    }
+  );
+});
+
+// 删除待办事项
+app.delete('/todos/:id', function(req, res) {
+  Todo.findByIdAndRemove(req.params.id, function(err) {
+    if (err) {
+      console.error(err);
+      res.status(500).send('服务器错误');
+    } else {
+      res.send('待办事项已删除');
+    }
+  });
+});
+
+// 启动服务器
+app.listen(3000, function() {
+  console.log('服务器已启动');
+});
